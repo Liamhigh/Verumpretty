@@ -6,6 +6,8 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     env:
       VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
     steps:

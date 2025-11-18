@@ -111,7 +111,32 @@ Triggers on: `push` to `main` branch
 
 Triggers on: `push` to `main` branch
 
-**Note:** This workflow appears to be redundant with the production workflow. Consider removing it or using it for preview deployments only.
+**Note:** This workflow targets a different Firebase project (`verum-omnis-v2`) than the production workflow (`verum-omnis-engine`). 
+
+**Current Configuration:**
+- **Project ID:** `verum-omnis-v2`
+- **Service Account Secret:** `FIREBASE_SERVICE_ACCOUNT_VERUM_OMNIS_V2`
+- **Features:** Web build and Firebase Hosting deployment only (no Android build)
+
+**Recommendation:** If both projects are active and need separate deployments, keep both workflows. Otherwise, consider:
+1. Disabling one workflow by renaming it (e.g., `firebase-hosting.yml.disabled`)
+2. Using the `firebase-hosting.yml` for preview deployments on pull requests
+3. Consolidating both into a single workflow with environment-specific configurations
+
+To disable this workflow temporarily without deleting it:
+```bash
+# In your repository
+mv .github/workflows/firebase-hosting.yml .github/workflows/firebase-hosting.yml.disabled
+```
+
+To repurpose it for preview deployments, change the trigger to:
+```yaml
+on:
+  pull_request:
+    branches:
+      - main
+```
+And update the `channelId` to a preview channel.
 
 ## Verifying Deployments
 

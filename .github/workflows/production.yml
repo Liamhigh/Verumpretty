@@ -4,11 +4,14 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
   build_and_deploy_web:
     name: Build Web & Deploy Firebase
     runs-on: ubuntu-latest
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.details_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -17,6 +20,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
@@ -26,13 +30,30 @@ jobs:
         env:
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
+      - name: Verify Build Output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory not found after build"
+            exit 1
+          fi
+          echo "Build output size: $(du -sh dist | cut -f1)"
+          echo "Build files:"
+          ls -lh dist/
+
       - name: Deploy to Firebase Hosting
+        id: deploy
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_VERUM_OMNIS_ENGINE }}'
           channelId: live
           projectId: verum-omnis-engine
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Web deployment successful!"
+          echo "📦 Build size: $(du -sh dist | cut -f1)"
+          echo "🚀 Deployment URL: ${{ steps.deploy.outputs.details_url }}"
 
   build_android_apk:
     name: Build Android APK
@@ -52,6 +73,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
 
       - name: Install Dependencies
         run: npm ci
@@ -61,14 +83,62 @@ jobs:
         env:
           VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
 
+      - name: Verify Capacitor Installation
+        run: |
+          if ! command -v cap &> /dev/null; then
+            echo "Capacitor CLI not found, will use npx"
+          fi
+          npx cap --version
+
       - name: Sync Capacitor
-        run: npx cap sync
+        run: npx cap sync android
+
+      - name: Verify Android Project
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Error: android directory not found"
+            echo "Run 'npx cap add android' first"
+            exit 1
+          fi
+          echo "Android project found"
+          ls -la android/
+
+      - name: Grant Gradle Execute Permission
+        run: chmod +x android/gradlew
 
       - name: Build Android APK (Debug)
-        run: cd android && ./gradlew assembleDebug
+        run: cd android && ./gradlew assembleDebug --stacktrace
+
+      - name: Verify APK Build
+        run: |
+          APK_PATH="android/app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "Error: APK not found at $APK_PATH"
+            exit 1
+          fi
+          echo "✅ APK built successfully"
+          echo "📦 APK size: $(du -sh $APK_PATH | cut -f1)"
+          echo "📍 APK path: $APK_PATH"
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: verum-omnis-debug
+          name: verum-omnis-debug-${{ github.sha }}
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 90
+
+      - name: Build Summary
+        run: |
+          echo "## 🎉 Build Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📱 Android APK" >> $GITHUB_STEP_SUMMARY
+          echo "- **Name:** verum-omnis-debug-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Size:** $(du -sh android/app/build/outputs/apk/debug/app-debug.apk | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Retention:** 90 days" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Web Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** Deployed to Firebase Hosting" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** verum-omnis-engine" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📥 Download APK" >> $GITHUB_STEP_SUMMARY
+          echo "Download the APK from the Artifacts section at the bottom of this workflow run." >> $GITHUB_STEP_SUMMARY

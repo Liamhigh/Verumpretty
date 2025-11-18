@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# CI trigger files
+ci-deploy-trigger.txt
+deploy-note.txt

@@ -80,13 +80,34 @@ npm run build
 
 The output files will be generated in the `dist/` directory.
 
+### Continuous Deployment
+
+This project uses GitHub Actions for automated deployment. See **[DEPLOYMENT.md](DEPLOYMENT.md)** for:
+
+- ✅ **Safe CI trigger procedures** - How to safely force-sync and trigger builds
+- 📋 **Workflow documentation** - Understanding the CI/CD pipelines  
+- 🔍 **Verification steps** - How to confirm deployments succeeded
+- 🐛 **Troubleshooting** - Common issues and solutions
+- 🔐 **Security best practices** - Managing secrets and permissions
+
 ### Firebase Hosting
 
-This project is configured for continuous deployment to Firebase Hosting. Every push to the `main` branch triggers the GitHub Actions workflow defined in `.github/workflows/firebase-hosting.yml`. This workflow automatically builds and deploys the application.
+This project is configured for continuous deployment to Firebase Hosting. Every push to the `main` branch triggers the GitHub Actions workflow defined in `.github/workflows/production.yml`. This workflow:
+
+1. Builds and deploys the web application to Firebase Hosting
+2. Builds an Android debug APK and uploads it as a workflow artifact
 
 For the workflow to succeed, you must configure the following secrets in your GitHub repository settings:
 -   `VITE_API_KEY`: Your Google Gemini API key.
 -   `FIREBASE_SERVICE_ACCOUNT_VERUM_OMNIS_ENGINE`: The JSON content of your Firebase service account key.
+
+**Quick CI Trigger:**
+```bash
+# Use the safe deployment script
+./deploy-trigger.sh
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment procedures and troubleshooting.
 
 ## Mobile Development (Capacitor)
 
